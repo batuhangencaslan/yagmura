@@ -406,11 +406,110 @@ nav{min-width:0}
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-X4K3E0S72F', { send_page_view: false });
+
   function trackAnalyticsEvent(eventName, parameters) {
     if (typeof window.gtag === 'function') {
       window.gtag('event', eventName, parameters || {});
     }
   }
+
+  // Süre ölçümleri: yalnızca sekme görünür ve sayfa odaktayken aktif süre sayılır.
+  window.__analyticsTiming = {
+    pageStartedAt: Date.now(),
+    activeStartedAt: document.visibilityState === 'visible' ? Date.now() : null,
+    activeMs: 0,
+    section: null,
+    sectionStartedAt: null,
+    galleryStartedAt: null,
+    videoStartedAt: null,
+    videoWatchedSeconds: 0
+  };
+
+  function analyticsFlushActiveTime() {
+    const t = window.__analyticsTiming;
+    if (t.activeStartedAt !== null) {
+      t.activeMs += Math.max(0, Date.now() - t.activeStartedAt);
+      t.activeStartedAt = null;
+    }
+  }
+  function analyticsResumeActiveTime() {
+    const t = window.__analyticsTiming;
+    if (document.visibilityState === 'visible' && document.hasFocus() && t.activeStartedAt === null) {
+      t.activeStartedAt = Date.now();
+    }
+  }
+  function analyticsDurationEvent(eventName, startedAt, extra) {
+    if (startedAt !== null && startedAt !== undefined) {
+      const seconds = Math.round((Date.now() - startedAt) / 1000);
+      if (seconds > 0) trackAnalyticsEvent(eventName, Object.assign({ duration_seconds: seconds }, extra || {}));
+    }
+  }
+  function analyticsCloseSection() {
+    const t = window.__analyticsTiming;
+    if (t.sectionStartedAt !== null && t.section) {
+      analyticsDurationEvent('section_time', t.sectionStartedAt, { section: t.section });
+    }
+    t.sectionStartedAt = null;
+  }
+  function analyticsCloseGallery() {
+    const t = window.__analyticsTiming;
+    if (t.galleryStartedAt !== null) {
+      analyticsDurationEvent('gallery_time', t.galleryStartedAt);
+      t.galleryStartedAt = null;
+    }
+  }
+  function analyticsCloseVideo(reason) {
+    const t = window.__analyticsTiming;
+    if (t.videoStartedAt !== null) {
+      const seconds = Math.max(0, Math.round((Date.now() - t.videoStartedAt) / 1000));
+      if (seconds > 0) {
+        t.videoWatchedSeconds += seconds;
+        trackAnalyticsEvent('video_watch_time', {
+          duration_seconds: seconds,
+          total_watched_seconds: t.videoWatchedSeconds,
+          end_reason: reason || 'pause'
+        });
+      }
+      t.videoStartedAt = null;
+    }
+  }
+
+  document.addEventListener('visibilitychange', function() {
+    if (document.visibilityState === 'hidden') {
+      analyticsFlushActiveTime();
+      analyticsCloseSection();
+      analyticsCloseGallery();
+      analyticsCloseVideo('tab_hidden');
+      const t = window.__analyticsTiming;
+      trackAnalyticsEvent('page_time', {
+        total_seconds: Math.round((Date.now() - t.pageStartedAt) / 1000),
+        active_seconds: Math.round(t.activeMs / 1000)
+      });
+    } else {
+      analyticsResumeActiveTime();
+      const t = window.__analyticsTiming;
+      const visibleSection = document.querySelector('section.show');
+      if (visibleSection) {
+        t.section = visibleSection.id;
+        t.sectionStartedAt = Date.now();
+      }
+      if (document.querySelector('#lb.open')) t.galleryStartedAt = Date.now();
+    }
+  });
+  window.addEventListener('focus', analyticsResumeActiveTime);
+  window.addEventListener('blur', analyticsFlushActiveTime);
+  window.addEventListener('pagehide', function() {
+    analyticsFlushActiveTime();
+    analyticsCloseSection();
+    analyticsCloseGallery();
+    analyticsCloseVideo('page_exit');
+    const t = window.__analyticsTiming;
+    trackAnalyticsEvent('page_time', {
+      total_seconds: Math.round((Date.now() - t.pageStartedAt) / 1000),
+      active_seconds: Math.round(t.activeMs / 1000)
+    });
+  });
+
 </script>
 
 </head>
@@ -767,11 +866,19 @@ const line='Bu hikâye bizim. Hazırsan başlayalım';let k=0;setTimeout(functio
 $('#startBtn').addEventListener('click',e=>{trackAnalyticsEvent('baslayalim_click');for(let i=0;i<18;i++){const h=document.createElement('span');h.className='burst';h.textContent=Math.random()<.5?'♡':'✦';h.style.left=e.clientX+'px';h.style.top=e.clientY+'px';const a=Math.random()*Math.PI*2,r=80+Math.random()*160;h.style.setProperty('--x',Math.cos(a)*r+'px');h.style.setProperty('--y',Math.sin(a)*r+'px');h.style.setProperty('--r',(Math.random()*90-45)+'deg');document.body.appendChild(h);setTimeout(()=>h.remove(),1500)}setTimeout(()=>$('#intro').classList.add('hide'),350);playMusic()});
 
 
-// Video görüntüleme: kullanıcı bir videoyu gerçekten oynattığında kaydedilir.
+// Video görüntüleme ve gerçek oynatma süresi.
 document.addEventListener('play', function(event) {
   if (event.target && event.target.tagName === 'VIDEO') {
     trackAnalyticsEvent('videos_view', { media_type: 'video' });
+    const t = window.__analyticsTiming;
+    if (t.videoStartedAt === null) t.videoStartedAt = Date.now();
   }
+}, true);
+document.addEventListener('pause', function(event) {
+  if (event.target && event.target.tagName === 'VIDEO') analyticsCloseVideo('pause');
+}, true);
+document.addEventListener('ended', function(event) {
+  if (event.target && event.target.tagName === 'VIDEO') analyticsCloseVideo('ended');
 }, true);
 
 /* ---------- Gezinme ---------- */
@@ -784,6 +891,10 @@ const analyticsSectionEvents = {
   dreams: 'hayaller_view'
 };
 function go(id){
+  analyticsCloseSection();
+  const timing = window.__analyticsTiming;
+  timing.section = id;
+  timing.sectionStartedAt = Date.now();
   if (analyticsSectionEvents[id]) {
     trackAnalyticsEvent(analyticsSectionEvents[id], { section: id });
   }
@@ -884,10 +995,11 @@ function openLB(list,i){
   });
   showLB();
   lb.classList.add('open');
+  window.__analyticsTiming.galleryStartedAt = Date.now();
   clearTimeout(sT)
 }
 const lbV=lb.querySelector('video'),lbImg=lb.querySelector('img');
-function closeLB(){lb.classList.remove('open');lbV.pause();lbV.removeAttribute('src');if($('#home').classList.contains('show'))showSlide(sI)}
+function closeLB(){analyticsCloseGallery();analyticsCloseVideo('gallery_closed');lb.classList.remove('open');lbV.pause();lbV.removeAttribute('src');if($('#home').classList.contains('show'))showSlide(sI)}
 function showLB(){const mm=lbList[lbI];if(mm.t==='vid'){lbImg.style.display='none';lbV.style.display='';lbV.src=mm.src;lbV.play().catch(()=>{})}else{lbV.pause();lbV.style.display='none';lbImg.style.display='';lbImg.src=mm.src}const m=lbList.length>1;lb.querySelector('.prev').style.display=m?'':'none';lb.querySelector('.next').style.display=m?'':'none'}
 const step=n=>{
   lbI=(lbI+n+lbList.length)%lbList.length;
