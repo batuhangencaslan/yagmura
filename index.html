@@ -557,7 +557,7 @@ nav{min-width:0}
     <h3>O geceden iki küçük an ♡</h3>
     <div class="storyvideo-stage">
       <video id="storySequenceVideo" src="ilk-tanisma-videolari/1.mp4" playsinline controls preload="metadata"></video>
-      <div class="storyvideo-empty" id="storySequenceEmpty">Videolar burada sırayla oynayacak</div>
+      <div class="storyvideo-empty" id="storySequenceEmpty" style="display:none"></div>
     </div>
     <div class="storyvideo-progress"><i class="on"></i><i></i></div>
     <div class="storyvideo-note" id="storySequenceNote">1 / 2</div>
@@ -1043,7 +1043,7 @@ $('#faceDel').addEventListener('click',()=>{D.faceB='';D.faceY='';save();renderH
 
 const STORY_VIDEOS=['ilk-tanisma-videolari/1.mp4','ilk-tanisma-videolari/2.mp4'];
 let storyVideoIndex=0;const storySeq=$('#storySequenceVideo'),storySeqEmpty=$('#storySequenceEmpty'),storyDots=$$('#storyVideoSequence .storyvideo-progress i');
-function setStoryVideo(i,autoplay){storyVideoIndex=(i+STORY_VIDEOS.length)%STORY_VIDEOS.length;storySeq.src=STORY_VIDEOS[storyVideoIndex];storyDots.forEach((d,j)=>d.classList.toggle('on',j===storyVideoIndex));$('#storySequenceNote').textContent=(storyVideoIndex+1)+' / '+STORY_VIDEOS.length;storySeqEmpty.style.display='flex';if(autoplay)storySeq.play().catch(()=>{})}
+function setStoryVideo(i,autoplay){storyVideoIndex=(i+STORY_VIDEOS.length)%STORY_VIDEOS.length;storySeq.src=STORY_VIDEOS[storyVideoIndex];storyDots.forEach((d,j)=>d.classList.toggle('on',j===storyVideoIndex));$('#storySequenceNote').textContent=(storyVideoIndex+1)+' / '+STORY_VIDEOS.length;storySeqEmpty.style.display='none';if(autoplay)storySeq.play().catch(()=>{})}
 storySeq.addEventListener('loadedmetadata',()=>{storySeqEmpty.style.display='none'});
 storySeq.addEventListener('error',()=>{storySeqEmpty.style.display='flex';storySeqEmpty.textContent=(storyVideoIndex+1)+'. video yüklenemedi'});
 storySeq.addEventListener('play',()=>trackAnalyticsEvent('ilk_tanisma_video_play',{video:storyVideoIndex+1}));
