@@ -1043,11 +1043,12 @@ $('#faceDel').addEventListener('click',()=>{D.faceB='';D.faceY='';save();renderH
 
 const STORY_VIDEOS=['ilk-tanisma-videolari/1.mp4','ilk-tanisma-videolari/2.mp4'];
 let storyVideoIndex=0;const storySeq=$('#storySequenceVideo'),storyDots=$$('#storyVideoSequence .storyvideo-progress i');
-function setStoryVideo(i,autoplay){storyVideoIndex=(i+STORY_VIDEOS.length)%STORY_VIDEOS.length;storySeq.src=STORY_VIDEOS[storyVideoIndex];storyDots.forEach((d,j)=>d.classList.toggle('on',j===storyVideoIndex));$('#storySequenceNote').textContent=(storyVideoIndex+1)+' / '+STORY_VIDEOS.length;if(autoplay)storySeq.play().catch(()=>{})}
-
-storySeq.addEventListener('error',()=>{console.warn((storyVideoIndex+1)+'. video yüklenemedi')});
+function storyUI(){storyDots.forEach((d,j)=>d.classList.toggle('on',j===storyVideoIndex));$('#storySequenceNote').textContent=(storyVideoIndex+1)+' / '+STORY_VIDEOS.length}
+function playStoryVideo(i){storyVideoIndex=i;storyUI();storySeq.pause();storySeq.src=STORY_VIDEOS[i];storySeq.load();const p=storySeq.play();if(p&&p.catch)p.catch(()=>{});}
 storySeq.addEventListener('play',()=>trackAnalyticsEvent('ilk_tanisma_video_play',{video:storyVideoIndex+1}));
-storySeq.addEventListener('ended',()=>{trackAnalyticsEvent('ilk_tanisma_video_complete',{video:storyVideoIndex+1});if(storyVideoIndex<STORY_VIDEOS.length-1)setStoryVideo(storyVideoIndex+1,true);else{storyVideoIndex=0;setStoryVideo(0,false)}});
+storySeq.addEventListener('ended',()=>{trackAnalyticsEvent('ilk_tanisma_video_complete',{video:storyVideoIndex+1});if(storyVideoIndex===0){playStoryVideo(1)}else{storyVideoIndex=0;storyUI();storySeq.src=STORY_VIDEOS[0];storySeq.load()}});
+storySeq.addEventListener('error',()=>console.warn('Video yüklenemedi:',STORY_VIDEOS[storyVideoIndex]));
+storyUI();
 $('#storyPic').addEventListener('click',()=>openLB([{t:'img',src:$('#storyPic img').src}],0));
 $('#gMore').addEventListener('click',()=>{gShown+=60;renderPhotos()});
 /* ---------- Düğün geri sayım ---------- */
