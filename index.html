@@ -556,7 +556,8 @@ nav{min-width:0}
   <div class="storyvideo-sequence" id="storyVideoSequence">
     <h3>O geceden iki küçük an ♡</h3>
     <div class="storyvideo-stage">
-      <video id="storySequenceVideo" src="ilk-tanisma-videolari/1.mp4" playsinline controls preload="metadata"></video>
+      <video id="storySequenceVideo1" src="ilk-tanisma-videolari/1.mp4" playsinline controls preload="auto"></video>
+      <video id="storySequenceVideo2" src="ilk-tanisma-videolari/2.mp4" playsinline controls preload="auto" style="display:none"></video>
       
     </div>
     <div class="storyvideo-progress"><i class="on"></i><i></i></div>
@@ -1042,13 +1043,15 @@ $('#faceYIn').addEventListener('change',async e=>{const f=e.target.files[0];if(!
 $('#faceDel').addEventListener('click',()=>{D.faceB='';D.faceY='';save();renderHug()});
 
 const STORY_VIDEOS=['ilk-tanisma-videolari/1.mp4','ilk-tanisma-videolari/2.mp4'];
-let storyVideoIndex=0;const storySeq=$('#storySequenceVideo'),storyDots=$$('#storyVideoSequence .storyvideo-progress i');
-function storyUI(){storyDots.forEach((d,j)=>d.classList.toggle('on',j===storyVideoIndex));$('#storySequenceNote').textContent=(storyVideoIndex+1)+' / '+STORY_VIDEOS.length}
-function playStoryVideo(i){storyVideoIndex=i;storyUI();storySeq.pause();storySeq.src=STORY_VIDEOS[i];storySeq.load();const p=storySeq.play();if(p&&p.catch)p.catch(()=>{});}
-storySeq.addEventListener('play',()=>trackAnalyticsEvent('ilk_tanisma_video_play',{video:storyVideoIndex+1}));
-storySeq.addEventListener('ended',()=>{trackAnalyticsEvent('ilk_tanisma_video_complete',{video:storyVideoIndex+1});if(storyVideoIndex===0){playStoryVideo(1)}else{storyVideoIndex=0;storyUI();storySeq.src=STORY_VIDEOS[0];storySeq.load()}});
-storySeq.addEventListener('error',()=>console.warn('Video yüklenemedi:',STORY_VIDEOS[storyVideoIndex]));
-storyUI();
+let storyVideoIndex=0;const storyV1=$('#storySequenceVideo1'),storyV2=$('#storySequenceVideo2'),storyDots=$$('#storyVideoSequence .storyvideo-progress i');
+function storyUI(i){storyVideoIndex=i;storyDots.forEach((d,j)=>d.classList.toggle('on',j===i));$('#storySequenceNote').textContent=(i+1)+' / 2'}
+storyV1.addEventListener('play',()=>{storyUI(0);trackAnalyticsEvent('ilk_tanisma_video_play',{video:1})});
+storyV1.addEventListener('ended',()=>{trackAnalyticsEvent('ilk_tanisma_video_complete',{video:1});storyV1.style.display='none';storyV2.style.display='block';storyUI(1);storyV2.currentTime=0;storyV2.play().catch(()=>{})});
+storyV2.addEventListener('play',()=>trackAnalyticsEvent('ilk_tanisma_video_play',{video:2}));
+storyV2.addEventListener('ended',()=>{trackAnalyticsEvent('ilk_tanisma_video_complete',{video:2});storyV2.pause();storyV2.style.display='none';storyV1.style.display='block';storyV1.currentTime=0;storyUI(0)});
+storyV1.addEventListener('error',()=>console.warn('1. video yüklenemedi'));
+storyV2.addEventListener('error',()=>console.warn('2. video yüklenemedi'));
+storyUI(0);
 $('#storyPic').addEventListener('click',()=>openLB([{t:'img',src:$('#storyPic img').src}],0));
 $('#gMore').addEventListener('click',()=>{gShown+=60;renderPhotos()});
 /* ---------- Düğün geri sayım ---------- */
